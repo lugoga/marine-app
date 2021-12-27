@@ -1,4 +1,6 @@
 require(shiny)
+require(shinydashboard)
+library(shinyWidgets) # needed if using shinydashboard items outside of shinydashboard
 require(tidyverse)
 require(tsibble)
 require(tmap)
@@ -7,6 +9,7 @@ require(DT)
 require(plotly)
 
 set.seed(124)
+options(scipen = n)
 
 ## basemap
 africa = st_read("data/africa.shp", quiet = TRUE)
@@ -110,12 +113,13 @@ ui = fluidPage(
   titlePanel(title = tags$h1("Marine Visualization Hub of Tanzania")),
   theme = bslib::bs_theme(version = 5, bootswatch = "flatly"),#shinythemes::shinytheme(theme = "journal"),
   
+  useShinydashboard(), # added this to make use of the function of shinydashboard and shinywidget package in shiny like the infobox for indicators of key
   
   sidebarLayout(
     sidebarPanel(width = 2,
-      tags$h2("Today's Outlook"),
+      tags$h2("Genesis"),
       # tags$br(),
-      p("This Data Driven Web Application Tool was developed by the Institute of Marine Sciences in collaboration with the Nelson Mandela African Institution of Science and Technology with financial support from the GMES AFRICA. The tool aim to provide up-to date information of the coastal state. The information as developed is the data driven with an intention to support decision makers and managers of coastal and marine resources along the Territorial and Exclusive Economic Zone waters' of Tanzania"),
+      p("Marine and Coastal Services Development for Southern Africa (MarCoSouth) project focus to contribute to the implementation of the African Space Policy and Strategy through application of world-leading satellite sensors. The project prime aim is to develop and provide new decision making service in the region, which promote sustainable management of marine resources and marine governance, and stimulate regional growth of the blue economy. To address this objective, the Institute of Marine Sciences in collaboration with the Nelson Mandela African Institution of Science and Technology secured finance from Ueropean Union aimed to develop an interactive tool, which allows users to query the system based on the question."),
       tags$br(),
       tags$img(src = "coat.png", width = "150px", height = "172px"),
       tags$img(src = "udsm.png", width = "171px", height = "185px"),
@@ -129,12 +133,33 @@ ui = fluidPage(
       tags$br(),
       tags$br(),
       tags$p("Designed and Developed by"),
-      tags$img(src = "wior.png", width = "150px", height = "169px")
+      tags$img(src = "wior.png", width = "150px", height = "169px"),
+      tags$br(),
+      tags$br()
     ),
     mainPanel(width = 10,
               tags$br(),
-              tags$br(),      
-              
+              tags$br(),   
+      # indicators infoboxes        
+      fluidRow(
+        tags$h3(paste("Oceanographic and Weather Outlook of ", format(lubridate::today(), "%B %d, %Y"))),
+        infoBoxOutput(outputId = "chl", width = 2),
+        infoBoxOutput(outputId = "sst", width = 2),
+        infoBoxOutput(outputId = "wind", width = 2),
+        infoBoxOutput(outputId = "rain", width = 2),
+        infoBoxOutput(outputId = "visibility", width = 2),
+        infoBoxOutput(outputId = "waves", width = 2),
+        infoBoxOutput(outputId = "current", width = 2),
+        infoBoxOutput(outputId = "oxygen", width = 2) ,
+        infoBoxOutput(outputId = "air", width = 2),
+        infoBoxOutput(outputId = "water", width = 2),
+        infoBoxOutput(outputId = "turbidity", width = 2),
+        infoBoxOutput(outputId = "soil", width = 2)
+        
+      ) # end of indicators
+      , 
+      tags$br(),
+      tags$br(), 
       fluidRow(
         tags$h3("The Sea Level"),
         column(width = 2, 
@@ -142,12 +167,13 @@ ui = fluidPage(
                sliderInput(inputId = "year", label = "Choose a Start Year", value = c(2001, 2018), min = 1980, max = 2020),
                helpText("The slide changes help the user to interact with the system and visualize the changes of the sea level as the machie predict")),
         column(width = 4, plotOutput(outputId = "sstplot")),
-        column(width = 4, htmlOutput(outputId = "slTrend"), 
+        column(width = 6, htmlOutput(outputId = "slTrend"), 
                helpText("Information based on Data From Zanzibar Harbour. A nonparametric test for a monotonic trend based on Kendall's tau statistic, and optionally compute a confidence interval for the slope"))
       ),
       tags$br(),
       tags$br(),
       tags$br(),
+      
       fluidRow(
         tags$h3("Sea Surface Temperature"),
         tags$br(),
@@ -157,8 +183,8 @@ ui = fluidPage(
                sliderInput(inputId = "sstPred", label = "Prediction Months", min = 0, max = 30, value = 15),
                helpText("The Chumbe Island has been monitoring the sea surface temprature since 1997. With this data long term data, we can precisely asses the impact of raising temperature in vital coastal habitats like the coral reefs, seagrasses and mangrove forest.")
         ),
-        column(width = 4, plotOutput(outputId = "clplot")),
-        column(width = 4, plotOutput(outputId = "decompose"))
+        column(width = 6, plotOutput(outputId = "clplot")),
+        column(width = 4, plotOutput(outputId = "trendSST"))
 
       ),
       tags$br(),
@@ -209,10 +235,20 @@ ui = fluidPage(
       ),
       tags$br(),
       tags$br(),
+      tags$br(),
+      
+      fluidRow(
+        tags$h3("Miscellenous"),
+        column(width = 2, sliderInput(inputId = "sampuli", label = "sample", value = 100, min = 0, max = 500)),
+        column(width = 4, tmapOutput(outputId = "cpue"))
+      ),
+      tags$br(),
+      tags$br(),
       tags$br()
+      
     )
     
-    
+   
   )
   
   
@@ -388,7 +424,7 @@ server = function(input, output, session){
   })
   
   
-  output$decompose = renderPlot({
+  output$trendSST = renderPlot({
     # establish a year for which to create a ts that is dynamic based on choice
     mwanzo.year = sstReactive() %>% distinct(year) %>% pull()
     
@@ -427,7 +463,7 @@ server = function(input, output, session){
      autoplot()+
      geom_smooth(color = "red", fill = "red", alpha = 0.3, size = 1.2)+
      forecast::geom_forecast(h = input$sstPred)+
-     labs(y = expression(SST~(degree*C)), title = paste("The rate of change is ", trend.rate$rate))+
+     labs(y = expression(SST~(degree*C)), title = paste("The Annual Rate of Change in Temperature is ", round(x = trend.rate$rate, digits = 3), expression(Degree~Celcius)))+
      theme_bw()+
      theme(axis.title.x = element_blank(), axis.text = element_text(size = 12, color = 1), 
            axis.title = element_text(size = 14, color = 1, face = "bold"))
@@ -478,7 +514,14 @@ server = function(input, output, session){
       # tm_shape(shp = prawn.culture, name = "Prawn Culture") +
       # tm_markers(clustering = TRUE, text ="Name" ,  text.just = "top",  markers.on.top.of.text = FALSE,  group = NA)+
       tm_shape(shp = ring.channel(), name = input$channel) +
-      tm_markers(clustering = TRUE)+
+      tm_markers(clustering = TRUE,
+                 popup.vars=c("Fishing Date" = "begin_time",
+                              # "Landing site" = "mwalo_bandari_diko",
+                              "Fishing ground" = "sehemu_aliyovua_locality",
+                              "Species" = "aina_ya_samaki" ,
+                              "Local name" = "local_name" , 
+                              "Weight (kg)" = "uzito", 
+                              "Number of fish" = "idadi"))+
       tm_view(set.view = c(lon = coords()$X[1], lat = coords()$Y[1], zoom = 9))
   })
   
@@ -501,6 +544,147 @@ server = function(input, output, session){
                         zeroline = FALSE, showticklabels = FALSE))
     
   })
+  
+  
+  output$cpue = renderTmap({
+    
+    tunas %>% 
+      filter(gear == "LL" & gear > 1000) %>% 
+      mutate(cpue = cpue*100) %>%
+      drop_na(lon) %>% 
+      st_as_sf(coords = c("lon", "lat"), crs = 4326) %>% 
+      sample_n(size = input$sampuli) %>%
+      tm_shape() + 
+      tm_bubbles(size = "weight", 
+                 col = "cpue", 
+                 alpha = 1,
+                 border.col = "black", border.alpha = .5, 
+                 style="fixed", 
+                 breaks=c(-Inf, seq(0, 150, by=40), Inf),
+                 palette="-RdYlBu", contrast=1, 
+                 title.col="Catch rate (Kg/100 hook)", 
+                 id="category_name", 
+                 popup.vars=c("Hooks" = "fishing_effort", "Number of fish" = "number", "Weight (kg)" = "weight"))
+  })
+  
+  
+## begin of indicators infoboxes
+  
+  output$chl <- renderInfoBox({
+    infoBox(title = HTML("Chl<br>"),
+            value = HTML("<p style='font-size:40px'>",
+                         0.2,"</p>"),
+            color = "green",
+            icon = shiny::icon(name = "cloud-sun"),
+            fill = TRUE
+    )
+  })
+  
+  output$sst = renderInfoBox({
+    infoBox(title = HTML("SST<br>"),
+            value = HTML("<p style='font-size:50px'>",
+                         25,"</p>"),
+            color = "maroon", 
+            icon = shiny::icon(name = "temperature-high"),
+            fill = TRUE)
+  })
+  
+  output$wind = renderInfoBox({
+    infoBox(title = HTML("Wind<br>"),
+            value = HTML("<p style='font-size:50px'>",
+                         12,"</p>"),
+            color = "blue",
+            icon = shiny::icon(name = "wind"),
+            fill = TRUE)
+  })
+  
+  output$rain = renderInfoBox({
+    infoBox(title = HTML("Rain<br>"),
+            value = HTML("<p style='font-size:50px'>",
+                         180,"</p>"),
+            color = "yellow",
+            icon = shiny::icon(name = "cloud-showers-heavy"),
+            fill = TRUE)
+  })
+  
+  output$visibility = renderInfoBox({
+    infoBox(title = HTML("Visibility<br>"),
+            value = HTML("<p style='font-size:50px'>",
+                         80,"</p>"),
+            color = "aqua",
+            icon = shiny::icon(name = "sun"),
+            fill = TRUE)
+  })
+  
+  
+  output$waves = renderInfoBox({
+    infoBox(title = HTML("Wave<br>"),
+            value = HTML("<p style='font-size:50px'>",
+                         0.2,"</p>"),
+            color = "navy",
+            icon = shiny::icon(name = "meteor"),
+            fill = TRUE)
+  })
+  
+  output$current = renderInfoBox({
+    infoBox(title = HTML("Current<br>"),
+            value = HTML("<p style='font-size:50px'>",
+                         0.4,"</p>"),
+            color = "orange",
+            icon = shiny::icon(name = "poo-storm"),
+            fill = TRUE)
+  })
+  
+  output$oxygen = renderInfoBox({
+    infoBox(title = HTML("Oxygen<br>"),
+            value = HTML("<p style='font-size:50px'>",
+                         4.2,"</p>"),
+            color = "teal",
+            icon = shiny::icon(name = "snowflake"),
+            fill = TRUE)
+  })
+  
+  output$soil = renderInfoBox({
+    infoBox(title = HTML("Soil<br>"),
+            value = HTML("<p style='font-size:50px'>",
+                         80,"</p>"),
+            color = "olive",
+            icon = shiny::icon(name = "water"),
+            fill = TRUE)
+  })
+  
+  #
+  
+  
+  output$air = renderInfoBox({
+    infoBox(title = HTML("Air<br>"),
+            value = HTML("<p style='font-size:50px'>",
+                         0.2,"</p>"),
+            color = "lime",
+            icon = shiny::icon(name = "bolt"),
+            fill = TRUE)
+  })
+  
+  output$water = renderInfoBox({
+    infoBox(title = HTML("Water<br>"),
+            value = HTML("<p style='font-size:50px'>",
+                         0.3,"</p>"),
+            color = "purple",
+            icon = shiny::icon(name = "umbrella"),
+            fill = TRUE)
+  })
+  
+  output$turbidity = renderInfoBox({
+    infoBox(title = HTML("Turbidity<br>"),
+            value = HTML("<p style='font-size:50px'>",
+                         1.4,"</p>"),
+            color = "fuchsia",
+            icon = shiny::icon(name = "smog"),
+            fill = TRUE)
+  })
+  
+  
+## end of indicators infoboxes
 }
 # end of server
 

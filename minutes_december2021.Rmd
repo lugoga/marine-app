@@ -21,3 +21,57 @@ The key information is the dissemination of *products* and *services* to the gen
 ## New Member
 Dr. Mwanahija Shalli
 
+
+```{r}
+library(tmap)
+library(leaflet)
+
+data(Europe)
+```
+
+```{r}
+
+
+data(World, metro)
+metro$growth <- (metro$pop2020 - metro$pop2010) / (metro$pop2010 * 10) * 100
+
+tmap_mode(mode = "view")
+# ttm()
+tm_shape(metro) +
+    tm_bubbles(size = "pop2010", col = "growth", 
+               border.col = "black", border.alpha = .5, 
+               style="fixed", breaks=c(-Inf, seq(0, 6, by=2), Inf),
+               palette="-RdYlBu", contrast=1, 
+               title.size="Metro population", 
+               title.col="Growth rate (%)", id="name", 
+               popup.vars=c("Population (2010)"="pop2010", "Population (2020)"="pop2020", "Growth (%)"="growth"),
+               popup.format=list(growth=list(digits=4)))
+```
+
+```{r}
+tunas = read_csv("coastal_dashboard/data/tunas.csv") 
+
+tunas %>% 
+  filter(gear == "LL" & gear > 1000) %>% 
+  mutate(cpue = cpue*100) %>%
+  drop_na(lon) %>% 
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>% 
+  sample_n(size = 300) %>%
+  tm_shape() + 
+  tm_bubbles(size = "weight", 
+             col = "cpue", 
+             alpha = 1,
+             border.col = "black", border.alpha = .5, 
+             style="fixed", 
+             breaks=c(-Inf, seq(0, 150, by=40), Inf),
+             palette="-RdYlBu", contrast=1, 
+             title.size="Metro population", 
+             title.col="Catch rate (Kg/100 hook)", 
+             id="category_name", 
+             popup.vars=c("Hooks" = "fishing_effort", "Number of fish" = "number", "Weight (kg)" = "weight"))
+
+
+
+
+```
+
