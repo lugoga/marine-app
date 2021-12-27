@@ -9,7 +9,7 @@ require(plotly)
 set.seed(124)
 
 ## basemap
-africa = st_read("d:/semba/shapefile/africa.shp", quiet = TRUE)
+africa = st_read("data/africa.shp", quiet = TRUE)
 
 pemba.sf = africa %>%  
   st_crop(xmin = 38, xmax = 41, ymin = -8, ymax = -2)
@@ -20,24 +20,26 @@ mycolor2 = c("#040ED8", "#2050FF", "#4196FF", "#6DC1FF", "#86D9FF", "#9CEEFF", "
 
 
 ## Sea level data processing
-sea.level = read_table2("d:/semba/marcosouth/coastal_dashboard/data/zanzibar_monthly.txt", col_names = F) 
+sea.level = read_csv("data/zanzibar_monthly.txt", col_names = T) 
 
-sea.level = sea.level%>% 
-  separate(col = 1, into = c("date.d", "a"), sep = ";")%>% 
-  separate(col = 3, into = c("level_mm", "a"), sep = ";")  %>% 
-  mutate(date = as.numeric(date.d),
-         date = lubridate::date_decimal(date) %>% lubridate::as_date(),
-         level_mm = as.numeric(level_mm))%>% 
-  select(date.d,date, level_mm)
+# sea.level = sea.level%>% 
+#   separate(col = 1, into = c("date.d", "a"), sep = ";")%>% 
+#   separate(col = 3, into = c("level_mm", "a"), sep = ";")  %>% 
+#   mutate(date = as.numeric(date.d),
+#          date = lubridate::date_decimal(date) %>% lubridate::as_date(),
+#          level_mm = as.numeric(level_mm))%>% 
+#   select(date.d,date, level_mm)
 
 
 ## Tuna EEZ Data
-tunas = read_csv("d:/semba/marcosouth/coastal_dashboard/data/tuna_clean_teez_sst_chl_pp_u_v_xwind_ywind_sla.csv") %>% 
-  mutate(category_name = str_remove_all(string = category_name, pattern = "Tuna"), 
-         date = lubridate::mdy(fishing_date),
-         month = lubridate::month(date, label = TRUE, abbr = TRUE),
-         season = lubridate::month(date), season = if_else(season %in% c(5:9), true = "SE", false = "NE"),
-         weight = na_if(x = weight, y = 0))
+tunas = read_csv("data/tunas.csv") 
+
+# %>% 
+#   mutate(category_name = str_remove_all(string = category_name, pattern = "Tuna"), 
+#          date = lubridate::mdy(fishing_date),
+#          month = lubridate::month(date, label = TRUE, abbr = TRUE),
+#          season = lubridate::month(date), season = if_else(season %in% c(5:9), true = "SE", false = "NE"),
+#          weight = na_if(x = weight, y = 0))
 
 
 flag = tunas %>% distinct(flag_state) %>% pull()
@@ -48,7 +50,7 @@ n  = nrow(tunas)
 
 
 ## ringnet fishery
-ringnet = read_csv("d:/semba/marcosouth/coastal_dashboard/data/ringnet_cpue_all.csv") %>% 
+ringnet = read_csv("data/ringnet_cpue_all.csv") %>% 
   filter(between(lon,38, 42), between(lat, -13, -4))
 
 ring.sf = ringnet %>% drop_na(lon)  %>% st_as_sf(coords = c("lon", "lat"), crs = 4326)
@@ -57,11 +59,11 @@ fish.groups = ringnet %>% distinct(Groups) %>% pull()
   
 
 ## upwelling phenomenon in Tanga
-upwelling = read_csv("d:/semba/marcosouth/coastal_dashboard/data/upwelling_events.csv")
+upwelling = read_csv("data/upwelling_events.csv")
 
 
 ## Chumbe Temperature
-sst.chumbe = read_csv("d:/semba/marcosouth/coastal_dashboard/data/Chumbe_Temperature 1997-30Nov2017.csv")
+sst.chumbe = read_csv("data/sst_chumbe.csv")
 
 sst.chumbe.long = sst.chumbe %>% 
   pivot_longer(cols = 2:23, values_to = "sst", names_to = "year") %>% 
@@ -81,28 +83,18 @@ sst.chumbe.long = sst.chumbe.long %>%
 ## MSP data
 ## data
 
-channels = st_read("d:/semba/marcosouth/coastal_dashboard/data/channels.shp", quiet = TRUE) %>% 
-  st_set_crs(4326)
+channels = st_read("data/channels.shp", quiet = TRUE) 
 channel.name = channels %>% distinct(channels) %>% pull()
 
-landing.sites = st_read("d:/semba/Projects/MASTER/tansea/tza_zan_fish_landing_sites_10k.shp", quiet = TRUE)
-
-iba = st_read("d:/semba/Projects/MASTER/tansea/tza_important_bird_areas_.shp", quiet = TRUE)
-
-coelacanth = st_read("d:/semba/Projects/MASTER/tansea/tza_coelacanth_200k.shp", quiet = TRUE)
-
-dolphin = st_read("d:/semba/Projects/MASTER/tansea/tza_dolphin_sites_200k.shp", quiet = TRUE)
-
-dugong = st_read("d:/semba/Projects/MASTER/tansea/tza_dugong_sightings_200k.shp", quiet = TRUE)
-
-prawn.culture = st_read("d:/semba/Projects/MASTER/tansea/tza_fish_prawn_culture_10k.shp", quiet = TRUE)
-
-ports = st_read("d:/semba/Projects/MASTER/tansea/tza_harbours_and_ports.shp", quiet = TRUE)
-
-mpa = st_read("d:/semba/Projects/MASTER/tansea/tza_marine_protected_areas_xx.shp", quiet = TRUE)
-
-
-coastal_features = st_read("d:/semba/vpo/data/shp/coastal_land_cover.shp", quiet = TRUE) %>% 
+landing.sites = st_read("data/fish_landing_sites.shp", quiet = TRUE)
+iba = st_read("data/iba.shp", quiet = TRUE)
+coelacanth = st_read("data/coelacanth.shp", quiet = TRUE)
+dolphin = st_read("data/dolphin.shp", quiet = TRUE)
+dugong = st_read("data/dugong.shp", quiet = TRUE)
+prawn.culture =  st_read("data/prawn_culture.shp", quiet = TRUE)
+ports =  st_read("data/ports.shp", quiet = TRUE)
+mpa = st_read("data/mpa.shp", quiet = TRUE)
+coastal_features =  st_read("data/coastal_features.shp", quiet = TRUE) %>% 
   janitor::clean_names() 
 
 coastal.only = coastal_features %>% 
@@ -123,7 +115,7 @@ ui = fluidPage(
     sidebarPanel(width = 2,
       tags$h2("Today's Outlook"),
       # tags$br(),
-      p("This Data Driven Web Application Tool was developed by the Institute of Marine Sciences in collaboration with the Nelson Mandela African Institution of Science and Technology with financial support from the GMES AFRICA. The tool aim to provide up-to date information of the coastal state. The information as developed is the data driven with an intention to support decision makers and managers of coastal and marine resources along the Territorial and in Exclusive Economi Zone waters of Tanzania"),
+      p("This Data Driven Web Application Tool was developed by the Institute of Marine Sciences in collaboration with the Nelson Mandela African Institution of Science and Technology with financial support from the GMES AFRICA. The tool aim to provide up-to date information of the coastal state. The information as developed is the data driven with an intention to support decision makers and managers of coastal and marine resources along the Territorial and Exclusive Economic Zone waters' of Tanzania"),
       tags$br(),
       tags$img(src = "coat.png", width = "150px", height = "172px"),
       tags$img(src = "udsm.png", width = "171px", height = "185px"),
@@ -144,14 +136,14 @@ ui = fluidPage(
               tags$br(),      
               
       fluidRow(
-        tags$h3("The Sea Level Information based on Data From Zanzibar Harbour"),
+        tags$h3("The Sea Level"),
         column(width = 2, 
                sliderInput(inputId = "sl", label = "Prediction Months", min = 0, max = 30, value = 15),
                sliderInput(inputId = "year", label = "Choose a Start Year", value = c(2001, 2018), min = 1980, max = 2020),
                helpText("The slide changes help the user to interact with the system and visualize the changes of the sea level as the machie predict")),
         column(width = 4, plotOutput(outputId = "sstplot")),
         column(width = 4, htmlOutput(outputId = "slTrend"), 
-               helpText("A nonparametric test for a monotonic trend based on Kendall's tau statistic, and optionally compute a confidence interval for the slope"))
+               helpText("Information based on Data From Zanzibar Harbour. A nonparametric test for a monotonic trend based on Kendall's tau statistic, and optionally compute a confidence interval for the slope"))
       ),
       tags$br(),
       tags$br(),
@@ -162,9 +154,11 @@ ui = fluidPage(
         tags$br(),
         column(width = 2, 
                dateRangeInput(inputId = "tsRange", label = "Select Date range", start = "2009-01-01", end = "2018-01-01"),
+               sliderInput(inputId = "sstPred", label = "Prediction Months", min = 0, max = 30, value = 15),
                helpText("The Chumbe Island has been monitoring the sea surface temprature since 1997. With this data long term data, we can precisely asses the impact of raising temperature in vital coastal habitats like the coral reefs, seagrasses and mangrove forest.")
         ),
         column(width = 4, plotOutput(outputId = "clplot")),
+        column(width = 4, plotOutput(outputId = "decompose"))
 
       ),
       tags$br(),
@@ -261,7 +255,8 @@ server = function(input, output, session){
   output$slTrend = renderText({
     sea.leve.ts() %>% 
       TSstudio::ts_reshape(type = "long") %>% 
-      as_tibble() %$% EnvStats::kendallTrendTest(value ~ year) %>% 
+      as_tibble() %$% 
+      EnvStats::kendallTrendTest(value ~ year) %>% 
       broom::glance() %>% 
       dplyr::select(1:5) %>% 
       kableExtra::kbl(digits = 3, col.names = c("Tau", "Slope", "Intercept", "Z", "p")) %>% 
@@ -360,10 +355,18 @@ server = function(input, output, session){
   })
 # end of upwelling manipulation
   
+  ## begin of sea surface temperature
+  
+  sstReactive = reactive({
+    sst.chumbe.long %>%
+      filter(date > input$tsRange[1] & date < input$tsRange[2])
+    
+    
+  })
+  
   output$clplot = renderPlot({
     
-    sst.chumbe.long %>%
-      filter(date > input$tsRange[1] & date < input$tsRange[2]) %>%
+    sstReactive()  %>%
       ggplot(aes(x = doy, y = year, z = sst))+
       metR::geom_contour_fill(bins = 8, na.fill = TRUE)+
       scale_x_continuous(breaks = scales::breaks_width(30), expand = c(0,0), name = "Day of Year")+
@@ -383,6 +386,55 @@ server = function(input, output, session){
             axis.title = element_text(size = 14, color = 1, face = "bold"), 
             legend.text = element_text(size = 11, color = 1))
   })
+  
+  
+  output$decompose = renderPlot({
+    # establish a year for which to create a ts that is dynamic based on choice
+    mwanzo.year = sstReactive() %>% distinct(year) %>% pull()
+    
+    # sstReactive() %>% 
+    #   mutate(month = lubridate::month(date)) %>% 
+    #   group_by(month, year, .drop = TRUE) %>% 
+    #   summarise(sst = median(sst, na.rm = TRUE)) %>% 
+    #   # ungroup() %>% 
+    #   arrange(year, month) %$% 
+    #   ts(data = sst, start = c(1997,1), frequency = 12) %>% 
+    #   imputeTS::na_random() %>% 
+    #   decompose() %>% 
+    #   autoplot()+
+    #   theme_bw()+
+    #   theme(axis.title.x = element_blank(), axis.text = element_text(size = 12, color = 1), 
+    #         axis.title = element_text(size = 14, color = 1, face = "bold"))
+    
+    ## decompose ts object inorder to obtain a trend over the period
+    decomp = sstReactive() %>%
+      mutate(month = lubridate::month(date)) %>%
+      group_by(month, year, .drop = TRUE) %>%
+      summarise(sst = mean(sst, na.rm = TRUE)) %>%
+      arrange(year, month) %$%
+      ts(data = sst, start = c(mwanzo.year[1],1), frequency = 12) %>%
+      imputeTS::na_random() %>% 
+      decompose()
+    
+    trend.rate = decomp$trend %>% 
+      TSstudio::ts_reshape(type = "long") %>% 
+      as_tibble() %$% 
+      EnvStats::kendallTrendTest(value ~ year) %>% 
+      broom::glance() %>% 
+      dplyr::select(rate = 2, significant = 5)
+    
+   decomp$trend %>%
+     autoplot()+
+     geom_smooth(color = "red", fill = "red", alpha = 0.3, size = 1.2)+
+     forecast::geom_forecast(h = input$sstPred)+
+     labs(y = expression(SST~(degree*C)), title = paste("The rate of change is ", trend.rate$rate))+
+     theme_bw()+
+     theme(axis.title.x = element_blank(), axis.text = element_text(size = 12, color = 1), 
+           axis.title = element_text(size = 14, color = 1, face = "bold"))
+     
+  })
+  
+# end of the sst manipulation
   
   
   ring.channel = reactive({
@@ -438,7 +490,7 @@ server = function(input, output, session){
     summarise(count = n()) %>% 
     ungroup() %>%
     as_tibble() %>% 
-    plot_ly(type = "pie", labels = ~Groups, values = ~count, group_by = ~season, hole = .6, 
+    plot_ly(type = "pie", labels = ~Groups, values = ~count, hole = .5, 
             textinfo='label+percent',
             insidetextorientation='radial') %>% 
     layout(title = paste("Species Composition at ", input$channel, "Channel"),  

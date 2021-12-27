@@ -1,0 +1,23 @@
+---
+title: "MarcoSouth December Meeting"
+author: "Masumbuko Semba"
+date: "12/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+The preliminary meeting was held in IMS building at Buyu on December 27, 2021. 
+
+## Agenda
+The meeting with the stakeholder that is organized for December 2017
+Review of the agreement of the meeting held on October 29, 2020
+
+The key information is the dissemination of *products* and *services* to the general public, particularly when we are entering into the blue economy contribution for economic development in the United Republic of Tanzania. 
+
+## New Member
+Dr. Mwanahija Shalli
+
