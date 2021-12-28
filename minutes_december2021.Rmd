@@ -25,6 +25,8 @@ Dr. Mwanahija Shalli
 ```{r}
 library(tmap)
 library(leaflet)
+require(tidyverse)
+require(raster)
 
 data(Europe)
 ```
@@ -69,6 +71,129 @@ tunas %>%
              title.col="Catch rate (Kg/100 hook)", 
              id="category_name", 
              popup.vars=c("Hooks" = "fishing_effort", "Number of fish" = "number", "Weight (kg)" = "weight"))
+
+
+
+
+```
+
+
+
+```{r}
+forecasts = rvest::read_html("https://forecast.weather.gov/MapClick.php?lat=37.7771&lon=-122.4196#.Xl0j6BNKhTY") %>% 
+  rvest::html_node(".temp") %>% 
+  rvest::html_text()
+
+```
+
+
+```{r}
+
+rvest::read_html("https://www.meteo.go.tz/?region=mjini-magharibi") %>% rvest::html_element("p")
+
+```
+
+
+
+```{r}
+sst = raster::raster("modis_sst.nc") 
+
+sst %>% raster::plot()
+```
+
+```{r}
+
+pal = leaflet::colorNumeric(c("#7f007f", "#0000ff",  "#007fff", "#00ffff", "#00bf00", "#7fdf00",
+"#ffff00", "#ff7f00", "#ff3f00", "#ff0000", "#bf0000"), values(sst),  na.color = "transparent")
+
+sst.color = c("#7f007f", "#0000ff",  "#007fff", "#00ffff", "#00bf00", "#7fdf00",
+"#ffff00", "#ff7f00", "#ff3f00", "#ff0000", "#bf0000")
+
+```
+
+
+```{r}
+
+leaflet() %>% 
+  addTiles() %>%
+  addRasterImage(x = sst , 
+                 colors = pal, 
+                 opacity = 1) %>%
+  addLegend(pal = pal, values = values(sst),
+    title = "Temperature")
+```
+
+
+
+
+
+```{r}
+tz.bbox = extent(38, 45, -14, 0)
+sst.tz = sst %>% raster::crop(tz.bbox)
+sst.tz %>% setMinMax()
+
+sst.tz[sst.tz < 26 | sst.tz > 30] = NA
+
+```
+
+
+```{r}
+
+pal2 = leaflet::colorNumeric(c("#7f007f", "#0000ff",  "#007fff", "#00ffff", "#00bf00", "#7fdf00",
+"#ffff00", "#ff7f00", "#ff3f00", "#ff0000", "#bf0000"), values(sst.tz),  na.color = "transparent")
+
+leaflet() %>% 
+  addTiles() %>%
+  addRasterImage(x = sst.tz , 
+                 colors = pal2, 
+                 opacity = 1) %>%
+  addLegend(pal = pal2, values = values(sst.tz),
+    title = "Temperature")
+```
+
+
+
+```{r}
+
+tmap_mode(mode = "view")
+
+sst.tz %>% 
+tm_shape() +
+  tm_raster(title = "SST", palette = color1, n = 20)
+
+```
+
+
+## windstress
+
+```{r}
+tidync::tidync("wind_stress_meridional_monthly_maps.nc")
+wind = raster::raster("wind_stress_meridional_monthly_maps.nc")
+wind[["January"]]
+
+wind %>% setMinMax()
+```
+
+
+```{r}
+tidync::tidync("wind_stress_curl_monthly_maps.nc", varname = "january")
+
+oceanmap::nc2raster("wind_stress_curl_monthly_maps.nc")
+
+
+
+wind = raster::stack("wind_stress_curl_monthly_maps.nc", varname = "february")
+# wind = raster::stack("wind_stress_curl_monthly_maps.nc")
+
+
+wind = wind %>% 
+  raster::crop(tz.bbox)
+
+wind[wind < -30 | wind > 30] = NA
+
+
+wind %>% 
+  raster::plot()
 
 
 

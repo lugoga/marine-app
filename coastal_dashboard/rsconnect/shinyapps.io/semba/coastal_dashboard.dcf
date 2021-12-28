@@ -4,10 +4,10 @@ username:
 account: semba
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
-appId: 5370828
-bundleId: 5412684
+appId: 5375126
+bundleId: 5414490
 url: https://semba.shinyapps.io/coastal_dashboard/
-when: 1640633772.57155
-lastSyncTime: 1640633772.57155
+when: 1640697031.28729
+lastSyncTime: 1640697031.28729
 asMultiple: FALSE
 asStatic: FALSE

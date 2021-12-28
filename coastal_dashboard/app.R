@@ -1,15 +1,24 @@
 require(shiny)
 require(shinydashboard)
-library(shinyWidgets) # needed if using shinydashboard items outside of shinydashboard
+library(shinyWidgets) # needed when using shinydashboard items outside of shinydashboard
 require(tidyverse)
 require(tsibble)
 require(tmap)
 require(sf)
 require(DT)
 require(plotly)
+require(raster)
+require(leaflet)
 
 set.seed(124)
+
 options(scipen = n)
+tmap_options(check.and.fix = TRUE)
+
+conflicted::conflict_prefer(name = "filter", winner = "dplyr")
+conflicted::conflict_prefer(name = "select", winner = "dplyr")
+conflicted::conflict_prefer("layout", "plotly")
+
 
 ## basemap
 africa = st_read("data/africa.shp", quiet = TRUE)
@@ -25,24 +34,9 @@ mycolor2 = c("#040ED8", "#2050FF", "#4196FF", "#6DC1FF", "#86D9FF", "#9CEEFF", "
 ## Sea level data processing
 sea.level = read_csv("data/zanzibar_monthly.txt", col_names = T) 
 
-# sea.level = sea.level%>% 
-#   separate(col = 1, into = c("date.d", "a"), sep = ";")%>% 
-#   separate(col = 3, into = c("level_mm", "a"), sep = ";")  %>% 
-#   mutate(date = as.numeric(date.d),
-#          date = lubridate::date_decimal(date) %>% lubridate::as_date(),
-#          level_mm = as.numeric(level_mm))%>% 
-#   select(date.d,date, level_mm)
-
 
 ## Tuna EEZ Data
 tunas = read_csv("data/tunas.csv") 
-
-# %>% 
-#   mutate(category_name = str_remove_all(string = category_name, pattern = "Tuna"), 
-#          date = lubridate::mdy(fishing_date),
-#          month = lubridate::month(date, label = TRUE, abbr = TRUE),
-#          season = lubridate::month(date), season = if_else(season %in% c(5:9), true = "SE", false = "NE"),
-#          weight = na_if(x = weight, y = 0))
 
 
 flag = tunas %>% distinct(flag_state) %>% pull()
@@ -103,10 +97,20 @@ coastal_features =  st_read("data/coastal_features.shp", quiet = TRUE) %>%
 coastal.only = coastal_features %>% 
   filter(class %in% c("Mangrove", "Salt marsh", "Tidal reef", "Salt pan", "Saline bare area", "Sand", "Seagrass", "Swamp") )
 
-tmap_options(check.and.fix = TRUE)
 
 
-
+# ## satellite data
+# 
+# sst = raster::raster("data/modis_sst.nc") 
+# tz.bbox = extent(38, 45, -14, 0)
+# sst.tz = sst %>% raster::crop(tz.bbox)
+# sst.tz %>% setMinMax()
+# 
+# sst.tz[sst.tz < 26 | sst.tz > 30] = NA
+# pal2 = leaflet::colorNumeric(c("#7f007f", "#0000ff",  "#007fff", "#00ffff", "#00bf00", "#7fdf00",
+#                                "#ffff00", "#ff7f00", "#ff3f00", "#ff0000", "#bf0000"), values(sst.tz),  na.color = "transparent")
+# 
+# ## end of satellite data
 
 
 ui = fluidPage(
@@ -123,24 +127,29 @@ ui = fluidPage(
       tags$br(),
       tags$img(src = "coat.png", width = "150px", height = "172px"),
       tags$img(src = "udsm.png", width = "171px", height = "185px"),
+      tags$img(src = "marcosouth.jpg", width = "150px", height = "57px"),
+      tags$img(src = "gmes.png", width = "150px", height = "56px"),
+      tags$img(src = "au.png", width = "150px", height = "133px"),
+      tags$img(src = "eu.jpg", width = "150px", height = "102px"),
       tags$img(src = "nmaist.png", width = "150px", height = "132px"),
       tags$img(src = "wiomsa.png", width = "200px", height = "130px"),
       tags$img(src = "dsfa.png", width = "150px", height = "169px"),
+      # tags$br(),
+      # tags$br(),
+      # tags$br(),
+      # tags$br(),
       tags$br(),
       tags$br(),
-      tags$br(),
-      tags$br(),
-      tags$br(),
-      tags$br(),
-      tags$p("Designed and Developed by"),
+      tags$p("Designed and Developed by Masumbuko Semba, Nelson Mandela African Insitution of Science and Technology, Arusha, Tanzania"),
       tags$img(src = "wior.png", width = "150px", height = "169px"),
       tags$br(),
       tags$br()
     ),
     mainPanel(width = 10,
               tags$br(),
-              tags$br(),   
-      # indicators infoboxes        
+              tags$br(),
+              
+      # begin of indicators infoboxes        
       fluidRow(
         tags$h3(paste("Oceanographic and Weather Outlook of ", format(lubridate::today(), "%B %d, %Y"))),
         infoBoxOutput(outputId = "chl", width = 2),
@@ -156,8 +165,20 @@ ui = fluidPage(
         infoBoxOutput(outputId = "turbidity", width = 2),
         infoBoxOutput(outputId = "soil", width = 2)
         
-      ) # end of indicators
-      , 
+      ) ,
+      # end of infobox indicators
+      tags$br(),
+      tags$br(),
+      
+      ## begin of satellite
+      # fluidRow(
+      #   tags$h3("Satellite observations"),
+      #   column(width = 2, selectInput(inputId = "miezi", label = "Months", choices = month.abb)),
+      #   column(width = 4, leafletOutput(outputId = "sstSat"))
+      #   # ,
+      #   # column(width = 4, leafletOutput(outputId = "chlSat"))
+      # ),
+     # # end of satellite
       tags$br(),
       tags$br(), 
       fluidRow(
@@ -244,8 +265,27 @@ ui = fluidPage(
       ),
       tags$br(),
       tags$br(),
-      tags$br()
+      tags$br(),
       
+      #  begin of valuebox
+      fluidRow(
+        tags$h3("Ecosystem Services Values"),
+        helpText("Marine ecosystem services are seriously undervalued, resulting in under-investment in conservation and lost opportunities for economic growth and poverty reduction. Economic valuation provides a powerful tool for sustainable development by showing how dependent the economy is on an ecosystem and what would be lost if the ecosystem is not protected."),
+        # tags$br(),
+        # tags$br(),
+        tags$br(),
+        tags$br(),
+        valueBoxOutput(outputId = "fisheries", width = 2),
+        valueBoxOutput(outputId = "tourism", width = 2),
+        valueBoxOutput(outputId = "mangrove", width = 2),
+        valueBoxOutput(outputId = "seagrass", width = 2),
+        valueBoxOutput(outputId = "coral", width = 2)
+        
+      ),
+      # end of valueox
+      tags$br(),
+      tags$br(),
+      tags$br()
     )
     
    
@@ -281,7 +321,7 @@ server = function(input, output, session){
       geom_smooth(color = "red", fill = "red", alpha = 0.3, size = 1.2)+
       forecast::geom_forecast(h = input$sl)+
       labs(subtitle = "Sea level changes in Zanzibar Port",  y = "Sea level (mm)")+
-      theme_bw()+
+      theme_minimal()+
       theme(axis.title.x = element_blank(), axis.text = element_text(size = 12, color = 1), 
             axis.title = element_text(size = 14, color = 1, face = "bold"))
     
@@ -374,7 +414,7 @@ server = function(input, output, session){
     facet_wrap(~miezi, nrow = 2)+
     ggspatial::layer_spatial(data = pemba.sf)+
     coord_sf(xlim = c(39.1,39.8), ylim = c(-5., -4.4))+
-    theme_bw() +
+    theme_minimal() +
     theme(axis.title.x = element_blank(), axis.text = element_text(size = 12, color = 1), 
           axis.title = element_text(size = 14, color = 1, face = "bold"))+
     metR::scale_x_longitude(breaks = c(39.0,39.4,39.8))+
@@ -417,7 +457,7 @@ server = function(input, output, session){
                                                   raster = TRUE,
                                                   barheight = unit(20,"lines"),
                                                   barwidth = unit(1.5, "lines")))+
-      theme_bw() +
+      theme_minimal() +
       theme(axis.text = element_text(size = 12, color = 1), 
             axis.title = element_text(size = 14, color = 1, face = "bold"), 
             legend.text = element_text(size = 11, color = 1))
@@ -438,7 +478,7 @@ server = function(input, output, session){
     #   imputeTS::na_random() %>% 
     #   decompose() %>% 
     #   autoplot()+
-    #   theme_bw()+
+    #   theme_minimal()+
     #   theme(axis.title.x = element_blank(), axis.text = element_text(size = 12, color = 1), 
     #         axis.title = element_text(size = 14, color = 1, face = "bold"))
     
@@ -464,7 +504,7 @@ server = function(input, output, session){
      geom_smooth(color = "red", fill = "red", alpha = 0.3, size = 1.2)+
      forecast::geom_forecast(h = input$sstPred)+
      labs(y = expression(SST~(degree*C)), title = paste("The Annual Rate of Change in Temperature is ", round(x = trend.rate$rate, digits = 3), expression(Degree~Celcius)))+
-     theme_bw()+
+     theme_minimal()+
      theme(axis.title.x = element_blank(), axis.text = element_text(size = 12, color = 1), 
            axis.title = element_text(size = 14, color = 1, face = "bold"))
      
@@ -685,6 +725,66 @@ server = function(input, output, session){
   
   
 ## end of indicators infoboxes
+
+## begin of indicators valuebox
+  
+  output$fisheries = renderValueBox({
+    scales::dollar(30.1) %>% 
+      valueBox(subtitle = "Fisheries",
+               icon = icon("server"),
+               color = "navy"
+      )
+  })
+  
+  output$tourism = renderValueBox({
+    scales::dollar(20.4) %>% 
+      valueBox(subtitle = "Tourism",
+               icon = icon("server"),
+               color = "maroon"
+      )
+  })
+  
+  output$coral = renderValueBox({
+    scales::dollar(58.3) %>% 
+      valueBox(subtitle = "Coral reefs",
+               icon = icon("server"),
+               color = "aqua"
+      )
+  })
+  
+  output$seagrass = renderValueBox({
+    
+    scales::dollar(102.8) %>% 
+      valueBox(subtitle = "Seagrasses",
+               icon = icon("server"),
+               color = "blue"
+      )
+  })
+  
+  output$mangrove = renderValueBox({
+    
+    scales::dollar(94.5) %>% 
+      valueBox(subtitle = "Mangroves",
+               icon = icon("server"),
+               color = "green"
+      )
+  })
+  
+  # output$sstSat = renderLeaflet({
+  #   
+  #   leaflet() %>% 
+  #     addTiles() %>%
+  #     addRasterImage(x = sst.tz , 
+  #                    colors = pal2, 
+  #                    opacity = 1) %>%
+  #     addLegend(pal = pal2, values = values(sst.tz),
+  #               title = "Temperature")
+  #   
+  # })
+ 
+  
+## end of indicators valuebox
+  
 }
 # end of server
 

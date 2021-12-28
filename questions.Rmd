@@ -1,0 +1,20 @@
+---
+title: "comments"
+author: "Masumbuko Semba and Nyamisi Peter"
+date: "12/28/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+i. sustainability of the blog after the project ends
+i. data issues and sensitivity
+i. policy brief development that
+1. time table that shows the high and low spring tides. phenomenon events should be tracked and documented and if possible the locations should be shown in the analytical tool
+i. TMA forecast should consider spatial dimensions and capture small scale and local 
+i. Blue economy needs information for investment, therefore, up to date and local information is required from the local people of what is happening. phones of the keystakeholders will help get information of what is happening at the ground.
+i. 
