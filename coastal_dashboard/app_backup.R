@@ -56,7 +56,7 @@ fish.groups = ringnet %>% distinct(Groups) %>% pull()
   
 
 ## upwelling phenomenon in Tanga
-upwelling = read_csv("data/upwelling_events.csv")
+upwelling = read_csv("coasdata/upwelling_events.csv")
 
 
 ## Chumbe Temperature
@@ -170,18 +170,15 @@ ui = fluidPage(
       tags$br(),
       tags$br(),
       
-     # begin of satellite
-     fluidRow(
-       tags$h3("Satellite observations"),
-       # column(width = 2, selectInput(inputId = "miezi", label = "Months", choices = month.abb)),
-       column(width = 3, 
-              sliderInput(inputId = "miezi", label = "Months", min = 1, max = 12, value = 1, step = 1, animate = TRUE),
-              helpText("Sea surface temperature is the temperature of the top millimeter of the ocean's surface. An anomaly is a departure from average conditions. These maps compare temperatures in a given month to the long-term average temperature of that month from 1993 through 2020")),
-       column(width = 4, leafletOutput(outputId = "sstleaf")),
-       # column(width = 4, tmapOutput(outputId = "sstSat")),
-       column(width = 4, tmapOutput(outputId = "sstIndex"))
-     ),
-     # end of satellite
+      ## begin of satellite
+      # fluidRow(
+      #   tags$h3("Satellite observations"),
+      #   column(width = 2, selectInput(inputId = "miezi", label = "Months", choices = month.abb)),
+      #   column(width = 4, leafletOutput(outputId = "sstSat"))
+      #   # ,
+      #   # column(width = 4, leafletOutput(outputId = "chlSat"))
+      # ),
+     # # end of satellite
       tags$br(),
       tags$br(), 
       fluidRow(
@@ -190,8 +187,8 @@ ui = fluidPage(
                sliderInput(inputId = "sl", label = "Prediction Months", min = 0, max = 30, value = 15),
                sliderInput(inputId = "year", label = "Choose a Start Year", value = c(2001, 2018), min = 1980, max = 2020),
                helpText("The slide changes help the user to interact with the system and visualize the changes of the sea level as the machie predict")),
-        column(width = 7, plotOutput(outputId = "sstplot")),
-        column(width = 3, htmlOutput(outputId = "slTrend"), 
+        column(width = 4, plotOutput(outputId = "sstplot")),
+        column(width = 6, htmlOutput(outputId = "slTrend"), 
                helpText("Information based on Data From Zanzibar Harbour. A nonparametric test for a monotonic trend based on Kendall's tau statistic, and optionally compute a confidence interval for the slope"))
       ),
       tags$br(),
@@ -773,97 +770,22 @@ server = function(input, output, session){
       )
   })
   
-  ## end of indicators valuebox
-  
-  
- ## begin of the satellite visulization
-  
-  output$sstleaf = renderLeaflet({
-    
-    sst.raster = upwelling %>% mutate(month = lubridate::month(time)) %>% 
-      filter(month == input$miezi) %>% select(x = longitude, y = latitude, sst) %>% rasterFromXYZ() 
-    
-    crs(sst.raster) = 4326
-    
-    pal3 = leaflet::colorNumeric(c("#7f007f", "#0000ff",  "#007fff", "#00ffff", "#00bf00", "#7fdf00",
-                                   "#ffff00", "#ff7f00", "#ff3f00", "#ff0000", "#bf0000"), values(sst.raster),  na.color = "transparent")
-    
-    leaflet() %>% 
-      addTiles() %>%
-      addRasterImage(x = sst.raster , 
-                     colors = pal3, 
-                     opacity = 1) %>% 
-      setView(lng = 39.5, lat = -5.2, zoom = 9) %>%
-      addLegend(pal = pal3, values = values(sst.raster),
-                title = "Temperature")
-    
-  })
- 
-  # output$sstSat = renderTmap({
+  # output$sstSat = renderLeaflet({
   #   
-  #   ## convert sst to raster
-  #   sst.raster = upwelling %>% 
-  #     mutate(month = lubridate::month(time)) %>% 
-  #     filter(month == input$miezi) %>% 
-  #     select(x = longitude, y = latitude, sst) %>% 
-  #     rasterFromXYZ() 
+  #   leaflet() %>% 
+  #     addTiles() %>%
+  #     addRasterImage(x = sst.tz , 
+  #                    colors = pal2, 
+  #                    opacity = 1) %>%
+  #     addLegend(pal = pal2, values = values(sst.tz),
+  #               title = "Temperature")
   #   
-  #   crs(sst.raster) = 4326
-  #   
-  #   sst.raster %>% 
-  #     # disaggregate(fact = 2) %>% 
-  #     tm_shape() +
-  #     tm_raster(style = "cont", title = "Temperature", col = "sst", n = 12) +
-  #     tm_view(set.view = c(lon = 39.5, lat = -5.2, zoom = 9))
   # })
+ 
   
-  output$sstIndex = renderTmap({
-    
-    ## convert upwelling to raster
-    upweeling.index = upwelling %>% 
-      mutate(month = lubridate::month(time)) %>% 
-      filter(month == input$miezi) %>% 
-      select(x = longitude, y = latitude, anomaly = sst.anomaly) %>% 
-      rasterFromXYZ() 
-    
-    crs(upweeling.index) = 4326
-    
-    ## reclassify the raster to upwelling=1 and non-upwelling=0
-    sst.bin = upweeling.index > -1 & upweeling.index <= -.45 
-    
-    ## filter only the upwelling area by assing non-upwelling area with NA
-    sst.bin[sst.bin == 0] = NA 
-    
-    # ## compute the area of upwelling in km square
-    # area = (ncell(sst.bin) * res(sst.bin)[1]^2)*110
-    # 
-    # sst.bin %>% 
-    #   tm_shape() +
-    #   tm_raster(title = "Upwelling", legend.show = FALSE, col = "layer" ) +
-    #   tm_view(set.view = c(lon = 39.5, lat = -5.2, zoom = 9))
-    
-    upwelling.poly = sst.bin %>% 
-      rasterToPolygons() %>% 
-      as("sf") %>% 
-      st_union() %>% 
-      st_as_sf() 
-    
-    area = as.numeric(st_area(upwelling.poly)/1000000)
-    
-    upwelling.poly %>% 
-      mutate(area = area, name = "Upwelling") %>% 
-      tm_shape() +
-      tm_polygons(col = "red", 
-                  # alpha = .4,
-                  id = "upwelling", pop.var = c("Area" = "area"))+
-        tm_view(set.view = c(lon = 39.5, lat = -5.2, zoom = 9))
-    
-  })
-  ## end of satellite visualization
+## end of indicators valuebox
   
 }
 # end of server
-
-
 
 shinyApp(ui, server)

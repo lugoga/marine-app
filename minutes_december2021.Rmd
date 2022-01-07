@@ -21,6 +21,8 @@ The key information is the dissemination of *products* and *services* to the gen
 ## New Member
 Dr. Mwanahija Shalli
 
+add online tool
+
 
 ```{r}
 library(tmap)
@@ -200,3 +202,254 @@ wind %>%
 
 ```
 
+
+```{r}
+
+sst.raster = upwelling %>% mutate(month = lubridate::month(time)) %>% 
+  filter(month == 2) %>% select(x = longitude, y = latitude, sst) %>% rasterFromXYZ() 
+
+crs(sst.raster) = 4326
+
+pal3 = leaflet::colorNumeric(c("#7f007f", "#0000ff",  "#007fff", "#00ffff", "#00bf00", "#7fdf00",
+"#ffff00", "#ff7f00", "#ff3f00", "#ff0000", "#bf0000"), values(sst.raster),  na.color = "transparent")
+
+leaflet() %>% 
+  addTiles() %>%
+  addRasterImage(x = sst.raster , 
+                 colors = pal3, 
+                 opacity = 1) %>%
+  addLegend(pal = pal3, values = values(sst.raster),
+    title = "Temperature")
+```
+
+
+```{r}
+## convert sst to raster
+sst.raster = upwelling %>% 
+  mutate(month = lubridate::month(time)) %>% 
+  filter(month == 2) %>% select(x = longitude, y = latitude, sst) %>% rasterFromXYZ() 
+
+crs(sst.raster) = 4326
+
+sst.raster %>% 
+  # disaggregate(fact = 2) %>% 
+  tm_shape() +
+  tm_raster(style = "cont", title = "Temperature", col = "sst", n = 12)+
+      tm_view(set.view = c(lon = 39.5, lat = -5.2, zoom = 8))
+
+
+## convert upwelling to raster
+upweeling.index = upwelling %>% 
+  mutate(month = lubridate::month(time)) %>% filter(month == 2) %>% 
+  select(x = longitude, y = latitude, anomaly = sst.anomaly) %>% 
+  rasterFromXYZ() 
+
+crs(upweeling.index) = 4326
+
+## reclassify the raster to upwelling=1 and non-upwelling=0
+sst.bin = upweeling.index > -1 & upweeling.index <= -.45 
+
+## filter only the upwelling area by assing non-upwelling area with NA
+sst.bin[sst.bin == 0] = NA 
+
+## compute the area of upwelling in km square
+ area = (ncell(sst.bin) * res(sst.bin)[1]^2)*110
+
+sst.bin %>% 
+  tm_shape() +
+  tm_raster(title = "Upwelling", legend.show = FALSE, col = "layer" ) +
+  tm_view(set.view = c(lon = 39.5, lat = -5.2, zoom = 9))
+```
+```{r}
+
+upwelling.poly = sst.bin %>% 
+  rasterToPolygons() %>% 
+  as("sf") %>% 
+  st_union() %>% 
+  st_as_sf() 
+
+area = as.numeric(st_area(upwelling.poly)/1000000)
+
+upwelling.poly %>% 
+  mutate(area = area, name = "Upwelling") %>% 
+  tm_shape() +
+  tm_polygons(col = "red", alpha = .4,
+              id = "upwelling", pop.var = c("Area" = "area"))
+
+```
+
+
+```{r}
+upweeling.index = upwelling %>% 
+  mutate(month = lubridate::month(time)) %>% filter(month == 2) %>% 
+  select(x = longitude, y = latitude, anomaly = sst.anomaly) %>% 
+  rasterFromXYZ() 
+
+crs(upweeling.index) = 4326
+
+pal4 = leaflet::colorNumeric(c("#7f007f", "#0000ff",  "#007fff", "#00ffff", "#00bf00", "#7fdf00",
+"#ffff00", "#ff7f00", "#ff3f00", "#ff0000", "#bf0000"), values(upweeling.index),  na.color = "transparent")
+
+leaflet() %>% 
+  addTiles() %>%
+  addRasterImage(x = upweeling.index , 
+                 colors = pal4, 
+                 opacity = 1) %>%
+  addLegend(pal = pal4, values = values(upweeling.index),
+    title = "Temperature")
+
+```
+
+
+```{r}
+zenji = read_csv("coastal_dashboard/data/meteo_zanzibar.csv") %>% 
+  drop_na(air_temp)
+```
+
+
+```{r}
+zenji %>% 
+  filter(date > lubridate::dmy(010101)) %>% 
+  ggplot(aes(x = date, y = precip))+
+  geom_line()+
+  geom_smooth()
+```
+## Argo
+
+```{r, eval=FALSE}
+require(tidyverse)
+require(argodata)
+require(sf)
+
+prof = argo_global_prof()
+prof %>% write_csv("d:/semba/argo/argo_prof.csv")
+
+
+```
+
+
+```{r}
+prof =  vroom::vroom("d:/semba/argodata/argo_prof.csv")
+tz = prof %>% filter(between(longitude,38,45), between(latitude,-14,-3))
+
+
+tz %>% 
+  distinct(file)
+  
+```
+
+```{r}
+tz.sf = tz %>% 
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) 
+
+tz.sf%>% mapview::mapview()
+  
+  
+```
+
+
+```{r}
+
+prof_gulf_pemba_channel <- prof %>%
+  argo_filter_radius(latitude = -6, longitude = 40, radius = 500) %>%
+  argo_filter_date("2000-01-01", "2021-12-01") %>%
+  argo_filter_data_mode("delayed")
+
+
+```
+
+```{r}
+
+levels <- prof_gulf_pemba_channel %>%
+  argo_prof_levels()
+
+levels %>% 
+  distinct(n_prof)
+```
+
+
+```{r}
+level.location = levels %>% 
+  left_join(prof_gulf_pemba_channel %>% 
+              dplyr::select(file:longitude))
+```
+
+
+```{r}
+level.location %>% 
+  filter(pres == 50) %>% 
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) %>% 
+  mapview::mapview()
+  
+```
+
+
+```{r}
+require(mgcViz)
+require(magrittr)
+require(raster)
+require(leaflet)
+```
+
+
+```{r}
+ras.argo = level.location %>% 
+  filter(pres == 20) %$%
+  gam(temp ~ s(longitude, latitude)) %>% 
+  # gam.check()
+  # mgcViz::getViz() %>% 
+  # plot() %>% 
+  tidymv::predict_gam() %>% 
+  dplyr::select(longitude:fit) %>% 
+  rasterFromXYZ()
+
+crs(ras.argo) = 4326
+
+## increase resolution
+
+ras.argo = ras.argo %>% 
+  disaggregate(fact = 20)
+
+pal3 = leaflet::colorNumeric(c("#7f007f", "#0000ff",  "#007fff", "#00ffff", "#00bf00", "#7fdf00",
+                               "#ffff00", "#ff7f00", "#ff3f00", "#ff0000", "#bf0000"), values(ras.argo), 
+                             na.color = "transparent")
+    
+
+  leaflet() %>% 
+      addTiles() %>%
+      addRasterImage(x = ras.argo , 
+                     project = TRUE,
+                     colors = pal3, 
+                     opacity = 1) %>% 
+      # setView(lng = 39.5, lat = -5.2, zoom = 9) %>%
+      addLegend(pal = pal3, values = values(ras.argo),
+                title = "Temperature")
+```
+
+
+```{r}
+argo.prof = level.location %>% 
+  filter(pres < 2000 & longitude < 41) %$% 
+  gam(psal ~ s(latitude, pres)) %>% 
+  tidymv::predict_gam()
+
+argo.prof %>% 
+    ggplot(aes(x = latitude, y = pres, z = fit))+
+    metR::geom_contour_fill()+
+    scale_y_reverse()+
+    scale_fill_gradientn(colours = oce::oce.colors9A(120))
+  
+```
+
+
+```{r}
+ggplot(levels, aes(x = temp, y = pres)) +
+  geom_line(aes(group = file), alpha = 0.01, orientation = "y") +
+  scale_y_reverse() +
+  scale_x_continuous(position = "top") +
+  theme_bw() +
+  labs(x = expression(Temperature~(degree*C)),y = "Pressure [dbar]")
+
+```
+
+## Pemba Meetings
